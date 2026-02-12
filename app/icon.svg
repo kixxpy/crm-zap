@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">CRM favicon</title>
+  <desc id="desc">8=8<0;8AB8G=0O 8:>=:0 CRM 4;O 2:;04:8 1@0C75@0</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#1f2937" />
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="url(#bg)" />
+  <path
+    d="M152 328c-22 0-40-7-53-21-13-14-19-33-19-57 0-24 7-43 20-57 13-14 31-21 53-21 17 0 31 3 43 11v31c-11-9-24-14-39-14-14 0-25 4-33 13-8 9-12 21-12 37 0 16 4 28 12 37 8 9 19 13 33 13 15 0 28-5 39-14v31c-12 8-26 11-43 11zm86-152h36l34 86 34-86h35l-54 136h-31l-54-136zm163 0h36c24 0 42 5 54 16 12 11 18 27 18 49 0 22-6 38-18 49-12 11-30 16-54 16h-36V176zm35 111c14 0 24-3 31-10 7-7 10-18 10-32 0-14-3-25-10-32-7-7-17-10-31-10h-10v84h10z"
+    fill="#f9fafb"
+  />
+</svg>
