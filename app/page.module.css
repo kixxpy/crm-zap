@@ -1,0 +1,254 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.realtimeStatus {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.realtimeOk {
+  font-size: 0.75rem;
+  color: hsl(142 76% 36%);
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  font-size: 1rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.search:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+.search::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.table th {
+  font-weight: 600;
+  background: hsl(var(--muted));
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.nameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.roleIconClient,
+.roleIconMaster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+}
+
+.roleIconClient {
+  background: hsl(210 40% 96%);
+}
+
+.roleIconMaster {
+  background: hsl(24 95% 93%);
+}
+
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
+.loading {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
+.error {
+  padding: 1rem;
+  background: hsl(var(--destructive) / 0.1);
+  border: 1px solid hsl(var(--destructive));
+  border-radius: var(--radius);
+  color: hsl(var(--destructive));
+}
+
+.realtimeHint {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  background: hsl(var(--muted));
+  border-radius: var(--radius);
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .colVin {
+    display: none;
+  }
+}
+
+.colActions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.table td.colActions {
+  padding-right: 0.5rem;
+}
+
+.actionsGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.deleteIcon {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+@media (max-width: 480px) {
+  .table th:nth-child(4),
+  .table td:nth-child(4) {
+    display: none;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem;
+  }
+
+  .colActions button {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+.pagination {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.paginationInfo {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.paginationButton {
+  min-width: 2.5rem;
+}
+
+.paginationPageInfo {
+  font-size: 0.875rem;
+}
+
+@media (max-width: 480px) {
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .paginationControls {
+    justify-content: space-between;
+  }
+}
