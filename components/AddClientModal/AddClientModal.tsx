@@ -24,6 +24,67 @@ export function AddClientModal({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const formatPhoneInput = useCallback((value: string): string => {
+    const digits = value.replace(/\D/g, "");
+
+    if (!digits) {
+      return "";
+    }
+
+    let normalized = digits;
+
+    if (normalized[0] !== "8") {
+      normalized = `8${normalized.replace(/^8+/, "")}`;
+    }
+
+    normalized = normalized.slice(0, 11);
+
+    let result = "";
+
+    result += normalized[0];
+
+    if (normalized.length > 1) {
+      result += " (" + normalized.slice(1, 4);
+    }
+
+    if (normalized.length >= 4) {
+      result += ")";
+    }
+
+    if (normalized.length > 4) {
+      result += " " + normalized.slice(4, 7);
+    }
+
+    if (normalized.length >= 7) {
+      result += "-";
+    }
+
+    if (normalized.length > 7) {
+      result += normalized.slice(7, 9);
+    }
+
+    if (normalized.length >= 9) {
+      result += "-";
+    }
+
+    if (normalized.length > 9) {
+      result += normalized.slice(9, 11);
+    }
+
+    return result;
+  }, []);
+
+  const getNormalizedPhone = useCallback((value: string): string => {
+    const digits = value.replace(/\D/g, "");
+    if (!digits) {
+      return "";
+    }
+    if (digits[0] !== "8") {
+      return `8${digits.replace(/^8+/, "")}`.slice(0, 11);
+    }
+    return digits.slice(0, 11);
+  }, []);
+
   const resetForm = useCallback(() => {
     setName("");
     setPhone("");
@@ -43,6 +104,7 @@ export function AddClientModal({
 
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
+    const normalizedPhone = getNormalizedPhone(trimmedPhone);
     const trimmedVin = vin.trim();
 
     if (role !== "client" && role !== "master") {
@@ -60,7 +122,7 @@ export function AddClientModal({
       return;
     }
 
-    if (!/^8\d{10}$/.test(trimmedPhone)) {
+    if (!/^8\d{10}$/.test(normalizedPhone)) {
       setError("Телефон должен быть в формате 89168184416");
       return;
     }
@@ -75,7 +137,7 @@ export function AddClientModal({
     try {
       const input: CreateClientInput = {
         name: trimmedName,
-        phone: trimmedPhone,
+        phone: normalizedPhone,
         vin: trimmedVin ? trimmedVin.toUpperCase() : undefined,
         role,
       };
@@ -185,8 +247,8 @@ export function AddClientModal({
               type="tel"
               className={styles.input}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="8(916)000-00-00"
+              onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+              placeholder="8 (916) 000-00-00"
               disabled={isSubmitting}
               required
             />
