@@ -113,6 +113,10 @@
   border-radius: var(--radius);
   background: hsl(var(--card));
   padding: 1rem;
+
+  opacity: 0;
+  transform: translateY(6px);
+  animation: cardFadeIn 280ms ease-out forwards;
 }
 
 .cardHeader {
@@ -159,6 +163,13 @@
   border-bottom: none;
 }
 
+.table tbody tr {
+  transition:
+    background-color 150ms ease-out,
+    transform 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
 .table tbody tr:hover {
   background: hsl(var(--muted) / 0.5);
 }
@@ -179,6 +190,12 @@
 .rowSelected {
   background: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
+}
+
+.rowClickable:hover {
+  background: hsl(var(--muted) / 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px hsl(210 10% 20% / 0.12);
 }
 
 .empty {
@@ -256,6 +273,9 @@
   justify-content: center;
   padding: 1rem;
   z-index: 50;
+
+  opacity: 0;
+  animation: overlayFadeIn 180ms ease-out forwards;
 }
 
 .modal {
@@ -269,6 +289,10 @@
   padding: 1rem;
   display: flex;
   flex-direction: column;
+
+  transform: translateY(8px) scale(0.98);
+  opacity: 0;
+  animation: modalPopIn 220ms ease-out forwards;
 }
 
 .modalHeader {
@@ -306,6 +330,49 @@
 
 .modal :global(.tableWrapper) {
   flex: 1;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fadeInOnScroll {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 260ms ease-out,
+    transform 260ms ease-out;
+}
+
+.fadeInOnScrollVisible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (max-width: 768px) {

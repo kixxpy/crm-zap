@@ -1,0 +1,18 @@
+ .page {
+  min-height: 100vh;
+  opacity: 0;
+  transform: translateY(4px);
+  animation: pageFadeIn 220ms ease-out forwards;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

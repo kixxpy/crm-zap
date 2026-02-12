@@ -102,8 +102,17 @@
   border-bottom: none;
 }
 
+.table tbody tr {
+  transition:
+    background-color 150ms ease-out,
+    transform 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
 .table tbody tr:hover {
   background: hsl(var(--muted) / 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px hsl(210 10% 20% / 0.12);
 }
 
 .nameCell {
@@ -251,4 +260,17 @@
   .paginationControls {
     justify-content: space-between;
   }
+}
+
+.fadeInOnScroll {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 260ms ease-out,
+    transform 260ms ease-out;
+}
+
+.fadeInOnScrollVisible {
+  opacity: 1;
+  transform: translateY(0);
 }

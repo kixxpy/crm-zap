@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import {
@@ -48,6 +48,8 @@ export default function SalesPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isRefundingId, setIsRefundingId] = useState<string | null>(null);
+
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   const totals = useMemo(
     () =>
@@ -121,6 +123,33 @@ export default function SalesPage() {
     void loadTransactions();
   }, [loadTransactions]);
 
+  useEffect(() => {
+    const element = titleRef.current;
+    if (!element) {
+      return;
+    }
+
+    element.classList.add(styles.fadeInOnScroll);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            element.classList.add(styles.fadeInOnScrollVisible);
+            observer.unobserve(element);
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
     setIsTransactionsModalOpen(true);
@@ -186,7 +215,9 @@ export default function SalesPage() {
 
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Продажи по дням</h1>
+          <h1 ref={titleRef} className={styles.title}>
+            Продажи по дням
+          </h1>
           <p className={styles.subtitle}>
             Выберите день, чтобы увидеть чеки и при необходимости отменить
             начисленные бонусы.

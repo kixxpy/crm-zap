@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { AddClientModal } from "@/components/AddClientModal/AddClientModal";
 import { NewPurchaseModal } from "@/components/NewPurchaseModal/NewPurchaseModal";
@@ -41,6 +41,8 @@ export default function Home() {
     Record<string, number>
   >({});
   const [isLoadingBonuses, setIsLoadingBonuses] = useState(false);
+
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   const loadClients = useCallback(async (withSpinner: boolean = false) => {
     if (withSpinner) {
@@ -113,11 +115,40 @@ export default function Home() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  useEffect(() => {
+    const element = titleRef.current;
+    if (!element) {
+      return;
+    }
+
+    element.classList.add(styles.fadeInOnScroll);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            element.classList.add(styles.fadeInOnScrollVisible);
+            observer.unobserve(element);
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <main className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Клиенты</h1>
+          <h1 ref={titleRef} className={styles.title}>
+            Клиенты
+          </h1>
         </div>
         <div className={styles.toolbar}>
           <Button
