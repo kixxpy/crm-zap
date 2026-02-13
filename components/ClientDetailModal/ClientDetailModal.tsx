@@ -43,7 +43,6 @@ interface ClientDetailModalProps {
   client: Client | null;
   onClose: () => void;
   onSuccess: () => void;
-  onNewPurchase: (client: Client) => void;
 }
 
 export function ClientDetailModal({
@@ -51,7 +50,6 @@ export function ClientDetailModal({
   client,
   onClose,
   onSuccess,
-  onNewPurchase,
 }: ClientDetailModalProps) {
   const [nameInput, setNameInput] = useState("");
   const [availableBonus, setAvailableBonus] = useState<number | null>(null);
@@ -64,13 +62,21 @@ export function ClientDetailModal({
 
   const [newVinInput, setNewVinInput] = useState("");
   const [newMachineInput, setNewMachineInput] = useState("");
-  const [isAddingVin, setIsAddingVin] = useState(false);
-  const [vinSuccess, setVinSuccess] = useState(false);
 
   const [editingVinId, setEditingVinId] = useState<string | null>(null);
   const [editMachineValue, setEditMachineValue] = useState("");
 
+  /** Локальные изменения до нажатия «Сохранить» */
+  const [pendingNewVins, setPendingNewVins] = useState<
+    Array<{ vin: string; machine_label: string | null }>
+  >([]);
+  const [editedMachineByVinId, setEditedMachineByVinId] = useState<
+    Record<string, string | null>
+  >({});
+  const [deletedVinIds, setDeletedVinIds] = useState<Set<string>>(new Set());
+
   const vins = client?.vins ?? [];
+  const visibleVins = vins.filter((v) => !deletedVinIds.has(v.id));
   const totalBonus = client?.bonus_balance ?? 0;
   const availableBonusValue = availableBonus ?? 0;
 
@@ -79,8 +85,10 @@ export function ClientDetailModal({
       setNameInput(client.name);
       setError(null);
       setSaveSuccess(false);
-      setVinSuccess(false);
       setEditingVinId(null);
+      setPendingNewVins([]);
+      setEditedMachineByVinId({});
+      setDeletedVinIds(new Set());
     }
   }, [client]);
 
@@ -153,7 +161,6 @@ export function ClientDetailModal({
   const handleClose = useCallback(() => {
     setError(null);
     setSaveSuccess(false);
-    setVinSuccess(false);
     setEditingVinId(null);
     setNewVinInput("");
     setNewMachineInput("");
@@ -169,13 +176,14 @@ export function ClientDetailModal({
     return () => document.removeEventListener("keydown", handler);
   }, [isOpen, handleClose]);
 
-  const handleOverlayClick = (event: React.MouseEvent) => {
-    if (event.target === event.currentTarget) {
-      handleClose();
-    }
-  };
+  const hasNameChange = nameInput.trim() !== (client?.name ?? "");
+  const hasVinChanges =
+    pendingNewVins.length > 0 ||
+    Object.keys(editedMachineByVinId).length > 0 ||
+    deletedVinIds.size > 0;
+  const hasChanges = hasNameChange || hasVinChanges;
 
-  const handleSaveName = async () => {
+  const handleSaveAll = async () => {
     if (!client) return;
 
     const trimmed = nameInput.trim();
@@ -192,13 +200,43 @@ export function ClientDetailModal({
       return;
     }
 
-    if (trimmed === client.name) {
+    const vinErrors = pendingNewVins.filter(
+      (p) => p.vin.length !== VIN_LENGTH || !VIN_REGEX.test(p.vin)
+    );
+    if (vinErrors.length > 0) {
+      setError(
+        `VIN должен содержать ${VIN_LENGTH} символов: латинские буквы и цифры`
+      );
       return;
     }
 
     setIsSaving(true);
     try {
-      await updateClient(client.id, { name: trimmed });
+      if (trimmed !== client.name) {
+        await updateClient(client.id, { name: trimmed });
+      }
+
+      for (const vinId of deletedVinIds) {
+        await deleteClientVin(vinId);
+      }
+
+      for (const [vinId, machineLabel] of Object.entries(editedMachineByVinId)) {
+        if (deletedVinIds.has(vinId)) continue;
+        const item = vins.find((v) => v.id === vinId);
+        if (item && (item.machine_label ?? null) !== machineLabel) {
+          await updateClientVin(vinId, {
+            machine_label: machineLabel?.trim() || null,
+          });
+        }
+      }
+
+      for (const p of pendingNewVins) {
+        await addClientVin(client.id, {
+          vin: p.vin,
+          machine_label: p.machine_label?.trim() || null,
+        });
+      }
+
       onSuccess();
       try {
         window.localStorage.setItem(
@@ -209,6 +247,10 @@ export function ClientDetailModal({
         // ignore
       }
       setSaveSuccess(true);
+      setPendingNewVins([]);
+      setEditedMachineByVinId({});
+      setDeletedVinIds(new Set());
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при сохранении");
     } finally {
@@ -216,12 +258,9 @@ export function ClientDetailModal({
     }
   };
 
-  const handleAddVin = async () => {
-    if (!client) return;
-
+  const handleAddVin = () => {
     const value = newVinInput.trim().toUpperCase();
     setError(null);
-    setVinSuccess(false);
 
     if (!value) {
       setError("Введите VIN");
@@ -235,34 +274,30 @@ export function ClientDetailModal({
       return;
     }
 
-    setIsAddingVin(true);
-    try {
-      await addClientVin(client.id, {
+    const exists =
+      vins.some((v) => v.vin === value) ||
+      pendingNewVins.some((p) => p.vin === value);
+    if (exists) {
+      setError("Такой VIN уже добавлен");
+      return;
+    }
+
+    setPendingNewVins((prev) => [
+      ...prev,
+      {
         vin: value,
         machine_label: newMachineInput.trim() || null,
-      });
-      onSuccess();
-      try {
-        window.localStorage.setItem(
-          "clients_last_update",
-          Date.now().toString()
-        );
-      } catch {
-        // ignore
-      }
-      setNewVinInput("");
-      setNewMachineInput("");
-      setVinSuccess(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка при добавлении VIN");
-    } finally {
-      setIsAddingVin(false);
-    }
+      },
+    ]);
+    setNewVinInput("");
+    setNewMachineInput("");
   };
 
   const startEditMachine = (item: ClientVin) => {
     setEditingVinId(item.id);
-    setEditMachineValue(item.machine_label ?? "");
+    setEditMachineValue(
+      (editedMachineByVinId[item.id] ?? item.machine_label ?? "").toString()
+    );
   };
 
   const cancelEditMachine = () => {
@@ -270,63 +305,31 @@ export function ClientDetailModal({
     setEditMachineValue("");
   };
 
-  const handleSaveMachine = async () => {
-    if (!client || !editingVinId) return;
+  const handleSaveMachineRow = () => {
+    if (!editingVinId) return;
+    setEditedMachineByVinId((prev) => ({
+      ...prev,
+      [editingVinId]: editMachineValue.trim() || null,
+    }));
+    setEditingVinId(null);
+    setEditMachineValue("");
+  };
 
-    setError(null);
-    setIsSaving(true);
-    try {
-      await updateClientVin(editingVinId, {
-        machine_label: editMachineValue.trim() || null,
-      });
-      onSuccess();
-      try {
-        window.localStorage.setItem(
-          "clients_last_update",
-          Date.now().toString()
-        );
-      } catch {
-        // ignore
-      }
+  const handleDeleteVin = (vinId: string) => {
+    setDeletedVinIds((prev) => new Set(prev).add(vinId));
+    setEditedMachineByVinId((prev) => {
+      const next = { ...prev };
+      delete next[vinId];
+      return next;
+    });
+    if (editingVinId === vinId) {
       setEditingVinId(null);
       setEditMachineValue("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка при сохранении");
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  const handleDeleteVin = async (vinId: string) => {
-    if (!client) return;
-    setError(null);
-    setIsSaving(true);
-    try {
-      await deleteClientVin(vinId);
-      onSuccess();
-      try {
-        window.localStorage.setItem(
-          "clients_last_update",
-          Date.now().toString()
-        );
-      } catch {
-        // ignore
-      }
-      if (editingVinId === vinId) {
-        setEditingVinId(null);
-        setEditMachineValue("");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка при удалении");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleNewPurchase = () => {
-    if (client) {
-      onNewPurchase(client);
-    }
+  const removePendingVin = (index: number) => {
+    setPendingNewVins((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (!isOpen || !client) return null;
@@ -334,7 +337,6 @@ export function ClientDetailModal({
   return (
     <div
       className={styles.overlay}
-      onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="client-detail-title"
@@ -360,25 +362,15 @@ export function ClientDetailModal({
           <label htmlFor="client-name" className={styles.label}>
             Имя
           </label>
-          <div className={styles.nameRow}>
-            <input
-              id="client-name"
-              type="text"
-              className={styles.input}
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              disabled={isSaving}
-              aria-describedby="name-hint"
-            />
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSaveName}
-              disabled={isSaving || nameInput.trim() === client.name}
-            >
-              {isSaving ? "Сохранение…" : "Сохранить"}
-            </Button>
-          </div>
+          <input
+            id="client-name"
+            type="text"
+            className={styles.input}
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            disabled={isSaving}
+            aria-describedby="name-hint"
+          />
           <span id="name-hint" className={styles.hint}>
             Не менее 3 символов
           </span>
@@ -396,9 +388,9 @@ export function ClientDetailModal({
 
         <div className={styles.section}>
           <span className={styles.label}>VIN-коды</span>
-          {vins.length > 0 ? (
+          {visibleVins.length > 0 || pendingNewVins.length > 0 ? (
             <ul className={styles.vinList} aria-label="Список VIN-кодов">
-              {vins.map((item) => (
+              {visibleVins.map((item) => (
                 <li key={item.id} className={styles.vinItem}>
                   {editingVinId === item.id ? (
                     <div className={styles.vinEditRow}>
@@ -416,7 +408,7 @@ export function ClientDetailModal({
                         <Button
                           type="button"
                           size="sm"
-                          onClick={() => handleSaveMachine()}
+                          onClick={handleSaveMachineRow}
                           disabled={isSaving}
                         >
                           Сохранить
@@ -437,7 +429,7 @@ export function ClientDetailModal({
                       <div className={styles.vinRow}>
                         <span className={styles.vinCode}>{item.vin}</span>
                         <span className={styles.vinMachine}>
-                          {item.machine_label ?? "—"}
+                          {(editedMachineByVinId[item.id] ?? item.machine_label) ?? "—"}
                         </span>
                       </div>
                       <div className={styles.vinItemActions}>
@@ -465,6 +457,28 @@ export function ClientDetailModal({
                   )}
                 </li>
               ))}
+              {pendingNewVins.map((p, index) => (
+                <li key={`new-${index}`} className={styles.vinItem}>
+                  <div className={styles.vinRow}>
+                    <span className={styles.vinCode}>{p.vin}</span>
+                    <span className={styles.vinMachine}>
+                      {p.machine_label ?? "—"}
+                    </span>
+                  </div>
+                  <div className={styles.vinItemActions}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removePendingVin(index)}
+                      disabled={isSaving}
+                      aria-label={`Удалить VIN ${p.vin}`}
+                    >
+                      Удалить
+                    </Button>
+                  </div>
+                </li>
+              ))}
             </ul>
           ) : (
             <span className={styles.hint}>Нет добавленных VIN-кодов</span>
@@ -479,7 +493,7 @@ export function ClientDetailModal({
                 onChange={(e) => setNewVinInput(e.target.value.toUpperCase())}
                 placeholder="Новый VIN (17 символов)"
                 maxLength={VIN_LENGTH}
-                disabled={isSaving || isAddingVin}
+                disabled={isSaving}
                 aria-label="VIN"
               />
               <input
@@ -488,7 +502,7 @@ export function ClientDetailModal({
                 value={newMachineInput}
                 onChange={(e) => setNewMachineInput(e.target.value)}
                 placeholder="Машина (необязательно)"
-                disabled={isSaving || isAddingVin}
+                disabled={isSaving}
                 aria-label="Описание машины"
               />
             </div>
@@ -498,22 +512,16 @@ export function ClientDetailModal({
               onClick={handleAddVin}
               disabled={
                 isSaving ||
-                isAddingVin ||
                 newVinInput.trim().length !== VIN_LENGTH ||
                 !VIN_REGEX.test(newVinInput.trim())
               }
             >
-              {isAddingVin ? "Добавление…" : "Добавить VIN"}
+              Добавить VIN
             </Button>
           </div>
           <span className={styles.hint}>
             {VIN_LENGTH} символов (латинские буквы и цифры)
           </span>
-          {vinSuccess && (
-            <span className={styles.success} role="status">
-              VIN добавлен
-            </span>
-          )}
         </div>
 
         <div className={styles.balance}>
@@ -562,10 +570,10 @@ export function ClientDetailModal({
           </Button>
           <Button
             type="button"
-            onClick={handleNewPurchase}
-            disabled={isSaving}
+            onClick={handleSaveAll}
+            disabled={isSaving || !hasChanges}
           >
-            Новая покупка
+            {isSaving ? "Сохранение…" : "Сохранить"}
           </Button>
         </div>
       </div>

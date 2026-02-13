@@ -304,10 +304,6 @@ export default function Home() {
         }
         onClose={() => setSelectedClient(null)}
         onSuccess={loadClients}
-        onNewPurchase={(c) => {
-          setSelectedClient(null);
-          setPurchaseClient(c);
-        }}
       />
 
       <NewPurchaseModal
