@@ -164,25 +164,11 @@ export function NewPurchaseModal({
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      handleClose();
-    }
-  };
-
   if (!isOpen || !client) return null;
 
   return (
     <div
       className={styles.overlay}
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
       aria-labelledby="new-purchase-title"

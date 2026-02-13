@@ -43,6 +43,49 @@ export async function createClient(input: CreateClientInput): Promise<Client> {
   return data as Client;
 }
 
+export interface UpdateClientInput {
+  name?: string;
+  vin?: string | null;
+}
+
+export async function updateClient(
+  id: string,
+  data: UpdateClientInput
+): Promise<Client> {
+  const payload: { name?: string; vin?: string | null } = {};
+  if (data.name !== undefined) {
+    payload.name = data.name.trim();
+  }
+  if (data.vin !== undefined) {
+    payload.vin =
+      data.vin == null || data.vin === ""
+        ? null
+        : data.vin.trim() || null;
+  }
+  if (Object.keys(payload).length === 0) {
+    const { data: current, error: fetchError } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (fetchError) throw new Error(fetchError.message);
+    return current as Client;
+  }
+
+  const { data: updated, error } = await supabase
+    .from("clients")
+    .update(payload)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return updated as Client;
+}
+
 export async function deleteClient(id: string): Promise<void> {
   const { error } = await supabase.from("clients").delete().eq("id", id);
 

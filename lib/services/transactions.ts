@@ -78,6 +78,29 @@ export async function fetchAvailableBonusBalancesForClients(
   return result;
 }
 
+export interface ClientPurchaseItem {
+  id: string;
+  created_at: string;
+  purchase_amount: number;
+}
+
+export async function fetchPurchasesByClientId(
+  clientId: string
+): Promise<ClientPurchaseItem[]> {
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("id, created_at, purchase_amount")
+    .eq("client_id", clientId)
+    .eq("is_refund", false)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ClientPurchaseItem[];
+}
+
 export async function createPurchase(
   input: CreatePurchaseInput
 ): Promise<Transaction> {

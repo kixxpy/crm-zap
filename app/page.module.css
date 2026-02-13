@@ -9,6 +9,11 @@
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px hsl(210 10% 20% / 0.06);
 }
 
 @media (min-width: 640px) {
@@ -25,9 +30,57 @@
   gap: 0.75rem;
 }
 
-.title {
-  font-size: 1.5rem;
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: hsl(var(--foreground));
+  text-decoration: none;
   font-weight: 700;
+  font-size: 1.125rem;
+  transition: opacity 150ms ease-out;
+}
+
+.logo:hover {
+  opacity: 0.85;
+}
+
+.logo:focus-visible {
+  outline: none;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+.logoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: hsl(var(--primary));
+}
+
+.logoIcon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.logoText {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 0.75rem 1rem;
+  }
+
+  .logoText {
+    display: none;
+  }
+
+  .logoIcon svg {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 .realtimeStatus {
@@ -113,6 +166,10 @@
   background: hsl(var(--muted) / 0.5);
   transform: translateY(-1px);
   box-shadow: 0 4px 10px hsl(210 10% 20% / 0.12);
+}
+
+.rowClickable {
+  cursor: pointer;
 }
 
 .nameCell {
@@ -260,17 +317,4 @@
   .paginationControls {
     justify-content: space-between;
   }
-}
-
-.fadeInOnScroll {
-  opacity: 0;
-  transform: translateY(10px);
-  transition:
-    opacity 260ms ease-out,
-    transform 260ms ease-out;
-}
-
-.fadeInOnScrollVisible {
-  opacity: 1;
-  transform: translateY(0);
 }

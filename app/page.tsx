@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import { AddClientModal } from "@/components/AddClientModal/AddClientModal";
+import { ClientDetailModal } from "@/components/ClientDetailModal/ClientDetailModal";
 import { NewPurchaseModal } from "@/components/NewPurchaseModal/NewPurchaseModal";
 import { DeleteClientModal } from "@/components/DeleteClientModal/DeleteClientModal";
 import { fetchClients } from "@/lib/services/clients";
@@ -35,14 +36,13 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [purchaseClient, setPurchaseClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const [availableBonuses, setAvailableBonuses] = useState<
     Record<string, number>
   >({});
   const [isLoadingBonuses, setIsLoadingBonuses] = useState(false);
-
-  const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   const loadClients = useCallback(async (withSpinner: boolean = false) => {
     if (withSpinner) {
@@ -115,40 +115,20 @@ export default function Home() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  useEffect(() => {
-    const element = titleRef.current;
-    if (!element) {
-      return;
-    }
-
-    element.classList.add(styles.fadeInOnScroll);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            element.classList.add(styles.fadeInOnScrollVisible);
-            observer.unobserve(element);
-          }
-        });
-      },
-      { threshold: 0.2 }
-    );
-
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
   return (
     <main className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 ref={titleRef} className={styles.title}>
-            Клиенты
-          </h1>
+          <a href="/" className={styles.logo} aria-label="На главную">
+            <span className={styles.logoIcon} aria-hidden="true">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 4v4M16 24v4M4 16h4M24 16h4M7.05 7.05l2.83 2.83M22.12 22.12l2.83 2.83M7.05 24.95l2.83-2.83M22.12 9.88l2.83-2.83M24.95 24.95l-2.83-2.83M9.88 9.88L7.05 7.05" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                <circle cx="16" cy="16" r="5" stroke="currentColor" strokeWidth="1.8"/>
+                <path d="M16 11v2.5M16 18.5V21M11 16h2.5M18.5 16H21" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            </span>
+            <span className={styles.logoText}>Parts CRM</span>
+          </a>
         </div>
         <div className={styles.toolbar}>
           <Button
@@ -208,7 +188,11 @@ export default function Home() {
               </thead>
               <tbody>
                 {paginatedClients.map((client) => (
-                  <tr key={client.id}>
+                  <tr
+                    key={client.id}
+                    className={styles.rowClickable}
+                    onClick={() => setSelectedClient(client)}
+                  >
                     <td>
                       <div className={styles.nameCell}>
                         <span
@@ -235,21 +219,24 @@ export default function Home() {
                     </td>
                     <td>{client.total_orders_count}</td>
                     <td className={styles.colActions}>
-                      <div className={styles.actionsGroup}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPurchaseClient(client)}
+                      <div
+                          className={styles.actionsGroup}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          Новая покупка
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Удалить клиента"
-                          onClick={() => setClientToDelete(client)}
-                        >
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPurchaseClient(client)}
+                          >
+                            Новая покупка
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Удалить клиента"
+                            onClick={() => setClientToDelete(client)}
+                          >
                           <span className={styles.deleteIcon} aria-hidden="true">
                             ×
                           </span>
@@ -300,6 +287,21 @@ export default function Home() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={loadClients}
+      />
+
+      <ClientDetailModal
+        isOpen={selectedClient !== null}
+        client={
+          selectedClient
+            ? clients.find((c) => c.id === selectedClient.id) ?? selectedClient
+            : null
+        }
+        onClose={() => setSelectedClient(null)}
+        onSuccess={loadClients}
+        onNewPurchase={(c) => {
+          setSelectedClient(null);
+          setPurchaseClient(c);
+        }}
       />
 
       <NewPurchaseModal
