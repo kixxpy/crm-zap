@@ -216,7 +216,7 @@ export function ClientDetailModal({
         await updateClient(client.id, { name: trimmed });
       }
 
-      for (const vinId of deletedVinIds) {
+      for (const vinId of Array.from(deletedVinIds)) {
         await deleteClientVin(vinId);
       }
 
