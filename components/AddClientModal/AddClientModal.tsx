@@ -19,7 +19,6 @@ export function AddClientModal({
 }: AddClientModalProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [vin, setVin] = useState("");
   const [role, setRole] = useState<"client" | "master">("client");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,7 +87,6 @@ export function AddClientModal({
   const resetForm = useCallback(() => {
     setName("");
     setPhone("");
-    setVin("");
     setRole("client");
     setError(null);
   }, []);
@@ -105,7 +103,6 @@ export function AddClientModal({
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
     const normalizedPhone = getNormalizedPhone(trimmedPhone);
-    const trimmedVin = vin.trim();
 
     if (role !== "client" && role !== "master") {
       setError("Неверная роль клиента");
@@ -127,18 +124,12 @@ export function AddClientModal({
       return;
     }
 
-    if (trimmedVin && !/^[A-Za-z0-9]{17}$/.test(trimmedVin)) {
-      setError("VIN должен содержать 17 символов: латинские буквы и цифры");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
       const input: CreateClientInput = {
         name: trimmedName,
         phone: normalizedPhone,
-        vin: trimmedVin ? trimmedVin.toUpperCase() : undefined,
         role,
       };
       await createClient(input);
@@ -237,19 +228,6 @@ export function AddClientModal({
               placeholder="8 (916) 000-00-00"
               disabled={isSubmitting}
               required
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="client-vin">VIN (необязательно)</label>
-            <input
-              id="client-vin"
-              type="text"
-              className={styles.input}
-              value={vin}
-              onChange={(e) => setVin(e.target.value)}
-              placeholder="WVWZZZ3CZWE123456"
-              disabled={isSubmitting}
             />
           </div>
 

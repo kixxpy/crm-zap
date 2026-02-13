@@ -104,10 +104,11 @@ export async function fetchPurchasesByClientId(
 export async function createPurchase(
   input: CreatePurchaseInput
 ): Promise<Transaction> {
-  const { client_id, purchase_amount, bonus_used } = input;
+  const { client_id, purchase_amount, bonus_used, accrue_bonus = true } = input;
 
   const final_paid = roundMoney(purchase_amount - bonus_used);
-  const bonus_earned = roundMoney(final_paid * BONUS_EARN_RATE);
+  const bonus_earned =
+    accrue_bonus ? roundMoney(final_paid * BONUS_EARN_RATE) : 0;
 
   const { data: txData, error: txError } = await supabase
     .from("transactions")

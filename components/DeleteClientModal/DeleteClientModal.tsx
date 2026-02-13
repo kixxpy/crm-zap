@@ -69,8 +69,11 @@ export function DeleteClientModal({
   if (client.phone) {
     clientDescriptionParts.push(client.phone);
   }
-  if (client.vin) {
-    clientDescriptionParts.push(client.vin);
+  const vins = client.vins ?? [];
+  if (vins.length > 0) {
+    clientDescriptionParts.push(
+      vins.length === 1 ? vins[0].vin : `${vins.length} VIN`
+    );
   }
   const clientDescription = clientDescriptionParts.join(" · ");
 

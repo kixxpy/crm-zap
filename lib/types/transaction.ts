@@ -14,6 +14,8 @@ export interface CreatePurchaseInput {
   client_id: string;
   purchase_amount: number;
   bonus_used: number;
+  /** При false бонусы с этой покупки не начисляются (режим «только списать»). По умолчанию true. */
+  accrue_bonus?: boolean;
 }
 
 export interface DailySalesSummary {

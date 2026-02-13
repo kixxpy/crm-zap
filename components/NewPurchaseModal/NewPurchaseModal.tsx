@@ -12,7 +12,7 @@ import styles from "./NewPurchaseModal.module.css";
 const MAX_BONUS_PERCENT = 0.2;
 const BONUS_EARN_RATE = 0.03;
 
-type BonusMode = "earn_only" | "spend_and_earn";
+type BonusMode = "earn_only" | "spend_only";
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
@@ -51,9 +51,7 @@ export function NewPurchaseModal({
   }, [purchaseNum, availableBonusValue]);
 
   const effectiveDeduction = useMemo(() => {
-    if (bonusMode === "earn_only") {
-      return 0;
-    }
+    if (bonusMode === "earn_only") return 0;
     return Math.min(bonusNum, maxBonusDeduction, purchaseNum);
   }, [bonusMode, bonusNum, maxBonusDeduction, purchaseNum]);
 
@@ -62,8 +60,9 @@ export function NewPurchaseModal({
   }, [purchaseNum, effectiveDeduction]);
 
   const bonusEarned = useMemo(() => {
+    if (bonusMode === "spend_only") return 0;
     return roundMoney(toPay * BONUS_EARN_RATE);
-  }, [toPay]);
+  }, [bonusMode, toPay]);
 
   const resetForm = useCallback(() => {
     setPurchaseAmount("");
@@ -121,7 +120,7 @@ export function NewPurchaseModal({
       return;
     }
 
-    if (bonusMode === "spend_and_earn" && (bonusToDeduct.trim() === "" || bonusNum <= 0)) {
+    if (bonusMode === "spend_only" && (bonusToDeduct.trim() === "" || bonusNum <= 0)) {
       setError("Укажите, сколько бонусов нужно списать");
       return;
     }
@@ -145,6 +144,7 @@ export function NewPurchaseModal({
         client_id: client.id,
         purchase_amount: purchaseNum,
         bonus_used: effectiveDeduction,
+        accrue_bonus: bonusMode === "earn_only",
       });
       resetForm();
       onSuccess();
@@ -225,12 +225,12 @@ export function NewPurchaseModal({
                 <input
                   type="radio"
                   name="bonus-mode"
-                  value="spend_and_earn"
-                  checked={bonusMode === "spend_and_earn"}
-                  onChange={() => setBonusMode("spend_and_earn")}
+                  value="spend_only"
+                  checked={bonusMode === "spend_only"}
+                  onChange={() => setBonusMode("spend_only")}
                   disabled={isSubmitting}
                 />
-                <span>Списать и накопить бонусы</span>
+                <span>Списать бонусы</span>
               </label>
             </div>
           </div>
@@ -248,7 +248,7 @@ export function NewPurchaseModal({
               onChange={(e) => setBonusToDeduct(e.target.value)}
               placeholder="0"
               disabled={isSubmitting || bonusMode === "earn_only"}
-              required={bonusMode === "spend_and_earn"}
+              required={bonusMode === "spend_only"}
             />
             {purchaseNum > 0 && (
               <span className={styles.hint}>
@@ -265,7 +265,9 @@ export function NewPurchaseModal({
             <div className={styles.summaryRow}>
               <span>Начислится бонусов</span>
               <span className={styles.summaryValue}>
-                {bonusEarned.toFixed(0)} (3%)
+                {bonusMode === "spend_only"
+                  ? "0 (при списании не начисляются)"
+                  : `${bonusEarned.toFixed(0)} (3%)`}
               </span>
             </div>
           </div>

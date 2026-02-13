@@ -209,7 +209,13 @@ export default function Home() {
                       </div>
                     </td>
                     <td>{client.phone ?? "—"}</td>
-                    <td className={styles.colVin}>{client.vin ?? "—"}</td>
+                    <td className={styles.colVin}>
+                      {client.vins?.length
+                        ? client.vins.length === 1
+                          ? client.vins[0].vin
+                          : `${client.vins.length} VIN`
+                        : "—"}
+                    </td>
                     <td>
                       {isLoadingBonuses
                         ? "…"

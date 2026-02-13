@@ -4,11 +4,16 @@ import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { updateClient } from "@/lib/services/clients";
 import {
+  addClientVin,
+  updateClientVin,
+  deleteClientVin,
+} from "@/lib/services/clientVins";
+import {
   fetchAvailableBonusBalance,
   fetchPurchasesByClientId,
   type ClientPurchaseItem,
 } from "@/lib/services/transactions";
-import type { Client } from "@/lib/types/client";
+import type { Client, ClientVin } from "@/lib/types/client";
 import styles from "./ClientDetailModal.module.css";
 
 const MIN_NAME_LENGTH = 3;
@@ -49,7 +54,6 @@ export function ClientDetailModal({
   onNewPurchase,
 }: ClientDetailModalProps) {
   const [nameInput, setNameInput] = useState("");
-  const [vinInput, setVinInput] = useState("");
   const [availableBonus, setAvailableBonus] = useState<number | null>(null);
   const [isLoadingBonus, setIsLoadingBonus] = useState(false);
   const [purchases, setPurchases] = useState<ClientPurchaseItem[]>([]);
@@ -57,18 +61,26 @@ export function ClientDetailModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveVinSuccess, setSaveVinSuccess] = useState(false);
 
+  const [newVinInput, setNewVinInput] = useState("");
+  const [newMachineInput, setNewMachineInput] = useState("");
+  const [isAddingVin, setIsAddingVin] = useState(false);
+  const [vinSuccess, setVinSuccess] = useState(false);
+
+  const [editingVinId, setEditingVinId] = useState<string | null>(null);
+  const [editMachineValue, setEditMachineValue] = useState("");
+
+  const vins = client?.vins ?? [];
   const totalBonus = client?.bonus_balance ?? 0;
   const availableBonusValue = availableBonus ?? 0;
 
   useEffect(() => {
     if (client) {
       setNameInput(client.name);
-      setVinInput(client.vin ?? "");
       setError(null);
       setSaveSuccess(false);
-      setSaveVinSuccess(false);
+      setVinSuccess(false);
+      setEditingVinId(null);
     }
   }, [client]);
 
@@ -141,7 +153,10 @@ export function ClientDetailModal({
   const handleClose = useCallback(() => {
     setError(null);
     setSaveSuccess(false);
-    setSaveVinSuccess(false);
+    setVinSuccess(false);
+    setEditingVinId(null);
+    setNewVinInput("");
+    setNewMachineInput("");
     onClose();
   }, [onClose]);
 
@@ -201,27 +216,30 @@ export function ClientDetailModal({
     }
   };
 
-  const handleSaveVin = async () => {
+  const handleAddVin = async () => {
     if (!client) return;
 
-    const value = vinInput.trim();
-    const currentVin = client.vin ?? "";
-    if (value === currentVin) return;
+    const value = newVinInput.trim().toUpperCase();
+    setError(null);
+    setVinSuccess(false);
 
-    if (value && !VIN_REGEX.test(value)) {
+    if (!value) {
+      setError("Введите VIN");
+      return;
+    }
+
+    if (value.length !== VIN_LENGTH || !VIN_REGEX.test(value)) {
       setError(
         `VIN должен содержать ${VIN_LENGTH} символов: латинские буквы и цифры`
       );
       return;
     }
 
-    setError(null);
-    setSaveVinSuccess(false);
-
-    setIsSaving(true);
+    setIsAddingVin(true);
     try {
-      await updateClient(client.id, {
-        vin: value ? value.toUpperCase() : null,
+      await addClientVin(client.id, {
+        vin: value,
+        machine_label: newMachineInput.trim() || null,
       });
       onSuccess();
       try {
@@ -232,9 +250,74 @@ export function ClientDetailModal({
       } catch {
         // ignore
       }
-      setSaveVinSuccess(true);
+      setNewVinInput("");
+      setNewMachineInput("");
+      setVinSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при добавлении VIN");
+    } finally {
+      setIsAddingVin(false);
+    }
+  };
+
+  const startEditMachine = (item: ClientVin) => {
+    setEditingVinId(item.id);
+    setEditMachineValue(item.machine_label ?? "");
+  };
+
+  const cancelEditMachine = () => {
+    setEditingVinId(null);
+    setEditMachineValue("");
+  };
+
+  const handleSaveMachine = async () => {
+    if (!client || !editingVinId) return;
+
+    setError(null);
+    setIsSaving(true);
+    try {
+      await updateClientVin(editingVinId, {
+        machine_label: editMachineValue.trim() || null,
+      });
+      onSuccess();
+      try {
+        window.localStorage.setItem(
+          "clients_last_update",
+          Date.now().toString()
+        );
+      } catch {
+        // ignore
+      }
+      setEditingVinId(null);
+      setEditMachineValue("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка при сохранении");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteVin = async (vinId: string) => {
+    if (!client) return;
+    setError(null);
+    setIsSaving(true);
+    try {
+      await deleteClientVin(vinId);
+      onSuccess();
+      try {
+        window.localStorage.setItem(
+          "clients_last_update",
+          Date.now().toString()
+        );
+      } catch {
+        // ignore
+      }
+      if (editingVinId === vinId) {
+        setEditingVinId(null);
+        setEditMachineValue("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка при удалении");
     } finally {
       setIsSaving(false);
     }
@@ -312,43 +395,123 @@ export function ClientDetailModal({
         </div>
 
         <div className={styles.section}>
-          <label htmlFor="client-vin" className={styles.label}>
-            VIN-код
-          </label>
-          <div className={styles.nameRow}>
-            <input
-              id="client-vin"
-              type="text"
-              className={styles.input}
-              value={vinInput}
-              onChange={(e) => setVinInput(e.target.value)}
-              disabled={isSaving}
-              placeholder="Не указан"
-              maxLength={VIN_LENGTH}
-              autoComplete="off"
-              aria-describedby="vin-hint"
-            />
+          <span className={styles.label}>VIN-коды</span>
+          {vins.length > 0 ? (
+            <ul className={styles.vinList} aria-label="Список VIN-кодов">
+              {vins.map((item) => (
+                <li key={item.id} className={styles.vinItem}>
+                  {editingVinId === item.id ? (
+                    <div className={styles.vinEditRow}>
+                      <span className={styles.vinCode}>{item.vin}</span>
+                      <input
+                        type="text"
+                        className={styles.input}
+                        value={editMachineValue}
+                        onChange={(e) => setEditMachineValue(e.target.value)}
+                        placeholder="Машина (необязательно)"
+                        disabled={isSaving}
+                        aria-label="Описание машины"
+                      />
+                      <div className={styles.vinItemActions}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleSaveMachine()}
+                          disabled={isSaving}
+                        >
+                          Сохранить
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={cancelEditMachine}
+                          disabled={isSaving}
+                        >
+                          Отмена
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={styles.vinRow}>
+                        <span className={styles.vinCode}>{item.vin}</span>
+                        <span className={styles.vinMachine}>
+                          {item.machine_label ?? "—"}
+                        </span>
+                      </div>
+                      <div className={styles.vinItemActions}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => startEditMachine(item)}
+                          disabled={isSaving}
+                        >
+                          Изменить описание
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteVin(item.id)}
+                          disabled={isSaving}
+                          aria-label={`Удалить VIN ${item.vin}`}
+                        >
+                          Удалить
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className={styles.hint}>Нет добавленных VIN-кодов</span>
+          )}
+
+          <div className={styles.vinAdd}>
+            <div className={styles.vinAddRow}>
+              <input
+                type="text"
+                className={styles.input}
+                value={newVinInput}
+                onChange={(e) => setNewVinInput(e.target.value.toUpperCase())}
+                placeholder="Новый VIN (17 символов)"
+                maxLength={VIN_LENGTH}
+                disabled={isSaving || isAddingVin}
+                aria-label="VIN"
+              />
+              <input
+                type="text"
+                className={styles.input}
+                value={newMachineInput}
+                onChange={(e) => setNewMachineInput(e.target.value)}
+                placeholder="Машина (необязательно)"
+                disabled={isSaving || isAddingVin}
+                aria-label="Описание машины"
+              />
+            </div>
             <Button
               type="button"
               size="sm"
-              onClick={handleSaveVin}
+              onClick={handleAddVin}
               disabled={
                 isSaving ||
-                vinInput.trim() === (client.vin ?? "") ||
-                (vinInput.trim() !== "" &&
-                  (vinInput.trim().length !== VIN_LENGTH ||
-                    !VIN_REGEX.test(vinInput.trim())))
+                isAddingVin ||
+                newVinInput.trim().length !== VIN_LENGTH ||
+                !VIN_REGEX.test(newVinInput.trim())
               }
             >
-              {isSaving ? "Сохранение…" : "Сохранить"}
+              {isAddingVin ? "Добавление…" : "Добавить VIN"}
             </Button>
           </div>
-          <span id="vin-hint" className={styles.hint}>
-            {VIN_LENGTH} символов (латинские буквы и цифры) или пусто
+          <span className={styles.hint}>
+            {VIN_LENGTH} символов (латинские буквы и цифры)
           </span>
-          {saveVinSuccess && (
+          {vinSuccess && (
             <span className={styles.success} role="status">
-              Сохранено
+              VIN добавлен
             </span>
           )}
         </div>
