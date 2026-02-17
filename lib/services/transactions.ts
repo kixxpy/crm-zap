@@ -20,22 +20,33 @@ export async function fetchAvailableBonusBalance(
 
   const { data, error } = await supabase
     .from("transactions")
-    .select("bonus_earned, bonus_used, created_at")
-    .eq("client_id", clientId)
-    .lte("created_at", thresholdIso);
+    .select("bonus_earned, bonus_used, created_at, is_refund")
+    .eq("client_id", clientId);
 
   if (error) {
     throw new Error(error.message);
   }
 
   const rows = (data ?? []) as Array<
-    Pick<Transaction, "bonus_earned" | "bonus_used">
+    Pick<
+      Transaction,
+      "bonus_earned" | "bonus_used" | "created_at" | "is_refund"
+    >
   >;
 
-  const total = rows.reduce(
-    (acc, row) => acc + row.bonus_earned - row.bonus_used,
-    0
-  );
+  let unlockedEarned = 0;
+  let totalUsed = 0;
+
+  for (const row of rows) {
+    // Бонусы становятся доступными через 10 часов после начисления,
+    // но списание должно учитываться сразу, чтобы баланс всегда был корректным.
+    if (row.is_refund || row.created_at <= thresholdIso) {
+      unlockedEarned += row.bonus_earned;
+    }
+    totalUsed += row.bonus_used;
+  }
+
+  const total = unlockedEarned - totalUsed;
 
   return roundMoney(Math.max(0, total));
 }
@@ -51,28 +62,46 @@ export async function fetchAvailableBonusBalancesForClients(
 
   const { data, error } = await supabase
     .from("transactions")
-    .select("client_id, bonus_earned, bonus_used, created_at")
-    .in("client_id", clientIds)
-    .lte("created_at", thresholdIso);
+    .select("client_id, bonus_earned, bonus_used, created_at, is_refund")
+    .in("client_id", clientIds);
 
   if (error) {
     throw new Error(error.message);
   }
 
   const rows = (data ?? []) as Array<
-    Pick<Transaction, "client_id" | "bonus_earned" | "bonus_used">
+    Pick<
+      Transaction,
+      "client_id" | "bonus_earned" | "bonus_used" | "created_at" | "is_refund"
+    >
   >;
+
+  const accumulators: Record<
+    string,
+    { unlockedEarned: number; totalUsed: number }
+  > = {};
+
+  for (const row of rows) {
+    const clientId = row.client_id;
+    if (!clientId) continue;
+
+    const acc =
+      accumulators[clientId] ?? { unlockedEarned: 0, totalUsed: 0 };
+
+    if (row.is_refund || row.created_at <= thresholdIso) {
+      acc.unlockedEarned += row.bonus_earned;
+    }
+
+    acc.totalUsed += row.bonus_used;
+
+    accumulators[clientId] = acc;
+  }
 
   const result: Record<string, number> = {};
 
-  for (const row of rows) {
-    const current = result[row.client_id] ?? 0;
-    const updated = current + row.bonus_earned - row.bonus_used;
-    result[row.client_id] = updated;
-  }
-
-  Object.keys(result).forEach((key) => {
-    result[key] = roundMoney(Math.max(0, result[key]));
+  Object.entries(accumulators).forEach(([clientId, acc]) => {
+    const total = acc.unlockedEarned - acc.totalUsed;
+    result[clientId] = roundMoney(Math.max(0, total));
   });
 
   return result;
